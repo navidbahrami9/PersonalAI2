@@ -1,4 +1,4 @@
-name: Android Environment Test
+name: Build Android APK
 
 on:
   workflow_dispatch:
@@ -17,30 +17,44 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install Android SDK tools
+      - name: Install Android SDK
         run: |
           sudo apt-get update
           sudo apt-get install -y wget unzip
 
           mkdir -p "$HOME/android-sdk/cmdline-tools"
 
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip -O /tmp/android-tools.zip
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip \
+            -O /tmp/android-tools.zip
 
           unzip -q /tmp/android-tools.zip -d /tmp/android-tools
 
-          mv /tmp/android-tools/cmdline-tools "$HOME/android-sdk/cmdline-tools/latest"
+          mv /tmp/android-tools/cmdline-tools \
+            "$HOME/android-sdk/cmdline-tools/latest"
 
           echo "ANDROID_HOME=$HOME/android-sdk" >> "$GITHUB_ENV"
           echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
           echo "$HOME/android-sdk/platform-tools" >> "$GITHUB_PATH"
 
-      - name: Install Android platform
-        run: |
           yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
-      - name: Test Android SDK
+      - name: Install Gradle
         run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          sdkmanager --version
-          echo "ANDROID SDK IS READY"
+          wget -q https://services.gradle.org/distributions/gradle-8.11.1-bin.zip \
+            -O /tmp/gradle.zip
+          sudo unzip -q /tmp/gradle.zip -d /opt
+          echo "/opt/gradle-8.11.1/bin" >> "$GITHUB_PATH"
+
+      - name: Build APK
+        run: |
+          gradle assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android-Test-APK
+          path: app/build/outputs/apk/debug/app-debug.apk

@@ -52,12 +52,14 @@ jobs:
           sudo unzip -q /tmp/gradle.zip -d /opt
           echo "/opt/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          na      - name: Build APK
+      - name: Build APK
         run: |
           echo "Starting Gradle build..."
           gradle --version
-          gradle assembleDebug --stacktrace --infome: Android-Test-APK
+          gradle assembleDebug --stacktrace --info
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android-Test-APK
           path: app/build/outputs/apk/debug/app-debug.apk

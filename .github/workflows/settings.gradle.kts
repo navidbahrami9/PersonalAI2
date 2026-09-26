@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AndroidTest"
+rootProject.name = "PersonalAI2"
 include(":app")

@@ -34,9 +34,10 @@ jobs:
           mv /tmp/android-tools/cmdline-tools/* \
             "$HOME/android-sdk/cmdline-tools/latest/"
 
-          export ANDROID_HOME="$HOME/android-sdk"
-          export ANDROID_SDK_ROOT="$HOME/android-sdk"
-          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+          echo "ANDROID_HOME=$HOME/android-sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> "$GITHUB_ENV"
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "$HOME/android-sdk/platform-tools" >> "$GITHUB_PATH"
 
           yes | sdkmanager --licenses
 
@@ -52,13 +53,21 @@ jobs:
           sudo unzip -q /tmp/gradle.zip -d /opt
           echo "/opt/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
+      - name: Prepare Android project
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          echo "Project files:"
+          find . -maxdepth 2 -type f | sort
+
       - name: Build APK
         run: |
           echo "Starting Gradle build..."
+          echo "ANDROID_HOME=$ANDROID_HOME"
           gradle --version
           gradle assembleDebug --stacktrace --info
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: Android-Test-APK

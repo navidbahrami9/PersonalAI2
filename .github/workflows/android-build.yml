@@ -18,52 +18,76 @@ jobs:
           java-version: '17'
 
       - name: Install Android SDK
+        shell: bash
         run: |
+          set -e
+
           sudo apt-get update
           sudo apt-get install -y wget unzip
 
-          mkdir -p "$HOME/android-sdk/cmdline-tools"
+          ANDROID_HOME="$HOME/android-sdk"
+          CMDLINE_TOOLS="$ANDROID_HOME/cmdline-tools/latest"
 
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip \
+          mkdir -p "$CMDLINE_TOOLS"
+
+          wget -q \
+            https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip \
             -O /tmp/android-tools.zip
 
-          mkdir -p /tmp/android-tools
           unzip -q /tmp/android-tools.zip -d /tmp/android-tools
 
-          mkdir -p "$HOME/android-sdk/cmdline-tools/latest"
-          mv /tmp/android-tools/cmdline-tools/* \
-            "$HOME/android-sdk/cmdline-tools/latest/"
+          cp -r /tmp/android-tools/cmdline-tools/* "$CMDLINE_TOOLS/"
 
-          echo "ANDROID_HOME=$HOME/android-sdk" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> "$GITHUB_ENV"
-          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-          echo "$HOME/android-sdk/platform-tools" >> "$GITHUB_PATH"
+          echo "Android SDK: $ANDROID_HOME"
+          echo "SDK Manager:"
+          "$CMDLINE_TOOLS/bin/sdkmanager" --version
 
-          yes | sdkmanager --licenses
+          yes | "$CMDLINE_TOOLS/bin/sdkmanager" --licenses
 
-          sdkmanager \
+          "$CMDLINE_TOOLS/bin/sdkmanager" \
             "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0"
 
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "$CMDLINE_TOOLS/bin" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+
       - name: Install Gradle
+        shell: bash
         run: |
-          wget -q https://services.gradle.org/distributions/gradle-8.11.1-bin.zip \
+          set -e
+
+          wget -q \
+            https://services.gradle.org/distributions/gradle-8.11.1-bin.zip \
             -O /tmp/gradle.zip
+
           sudo unzip -q /tmp/gradle.zip -d /opt
+
           echo "/opt/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
       - name: Prepare Android project
+        shell: bash
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          echo "Project files:"
+
+          echo "Project structure:"
           find . -maxdepth 2 -type f | sort
 
       - name: Build APK
+        shell: bash
         run: |
-          echo "Starting Gradle build..."
+          set -e
+
           echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "Java:"
+          java -version
+
+          echo "Gradle:"
           gradle --version
+
+          echo "Building APK..."
           gradle assembleDebug --stacktrace --info
 
       - name: Upload APK

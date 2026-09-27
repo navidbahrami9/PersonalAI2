@@ -34,16 +34,18 @@ jobs:
             https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip \
             -O /tmp/android-tools.zip
 
+          mkdir -p /tmp/android-tools
           unzip -q /tmp/android-tools.zip -d /tmp/android-tools
 
           cp -r /tmp/android-tools/cmdline-tools/* "$CMDLINE_TOOLS/"
 
-          echo "Android SDK: $ANDROID_HOME"
-          echo "SDK Manager:"
+          echo "Checking sdkmanager..."
           "$CMDLINE_TOOLS/bin/sdkmanager" --version
 
-          yes | "$CMDLINE_TOOLS/bin/sdkmanager" --licenses
+          echo "Accepting Android SDK licenses..."
+          "$CMDLINE_TOOLS/bin/sdkmanager" --licenses < /dev/null || true
 
+          echo "Installing Android SDK packages..."
           "$CMDLINE_TOOLS/bin/sdkmanager" \
             "platform-tools" \
             "platforms;android-35" \
@@ -81,13 +83,13 @@ jobs:
           set -e
 
           echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "Java:"
+
           java -version
 
-          echo "Gradle:"
           gradle --version
 
           echo "Building APK..."
+
           gradle assembleDebug --stacktrace --info
 
       - name: Upload APK

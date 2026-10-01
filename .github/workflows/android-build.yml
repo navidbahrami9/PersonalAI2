@@ -77,12 +77,27 @@ jobs:
       - name: Prepare Android project
         shell: bash
         run: |
-          set -e
-
           echo "sdk.dir=$ANDROID_HOME" > local.properties
 
           echo "Project structure:"
-          find . -maxdepth 3 -type f | sort
+          find . -maxdepth 5 -type f | sort
+
+      - name: Check Kotlin compilation
+        shell: bash
+        run: |
+          set -e
+
+          echo "===== MainActivity source ====="
+          find app/src -name "MainActivity.kt" -print
+
+          echo "===== MainActivity source content ====="
+          cat app/src/main/java/com/example/androidtest/MainActivity.kt
+
+          echo "===== Kotlin compilation ====="
+          gradle :app:compileDebugKotlin --stacktrace
+
+          echo "===== Compiled classes ====="
+          find app/build -type f | grep -E "MainActivity|classes" | head -100
 
       - name: Build APK
         shell: bash
@@ -97,6 +112,17 @@ jobs:
           echo "Building APK..."
 
           gradle assembleDebug --stacktrace --info
+
+      - name: Inspect APK
+        shell: bash
+        run: |
+          set -e
+
+          echo "===== APK FILE ====="
+          ls -lh app/build/outputs/apk/debug/app-debug.apk
+
+          echo "===== APK CONTENT ====="
+          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -E "classes[0-9]*\.dex|AndroidManifest.xml" || true
 
       - name: Upload APK
         if: success()

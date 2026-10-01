@@ -1,18 +1,18 @@
 name: Android Build Test
 
 on:
-workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
-build:
-runs-on: ubuntu-24.04
+  build:
+    runs-on: ubuntu-24.04
 
-steps:
-  - name: Checkout
-    uses: actions/checkout@v5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
 
-  - name: Test
-    run: |
-      echo "Workflow is working"
-      echo "Project: PersonalAI2"
-      java -version
+      - name: Test
+        run: |
+          echo "Workflow is working"
+          echo "Project: PersonalAI2"
+          java -version

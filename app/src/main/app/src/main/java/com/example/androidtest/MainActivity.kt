@@ -6,13 +6,14 @@ import android.widget.TextView
 
 class MainActivity : Activity() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
 
-        val textView = TextView(this)
-        textView.text = "Android Test\n\nAPK is working!"
-        textView.textSize = 24f
+    val textView = TextView(this)
+    textView.text = "Android Test\n\nAPK is working!"
+    textView.textSize = 24f
 
-        setContentView(textView)
-    }
+    setContentView(textView)
+}
+
 }

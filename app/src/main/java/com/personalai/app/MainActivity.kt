@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.personalai.app
 
 import android.os.Bundle
@@ -168,13 +170,6 @@ fun PersonalAIApp() {
 }
 
 object Api {
-
-    /*
-     * فعلاً آدرس سرور توسعه.
-     *
-     * اگر سرور روی کامپیوتر خودت اجرا شود،
-     * 10.0.2.2 برای شبیه‌ساز اندروید استفاده می‌شود.
-     */
 
     private const val BASE =
         "http://10.0.2.2:8000"

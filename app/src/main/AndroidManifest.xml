@@ -1,18 +1,28 @@
-<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android"><application
-    android:theme="@style/AppTheme"
-    android:label="Android Test">
+<?xml version="1.0" encoding="utf-8"?>
 
-    <activity
-        android:name="com.example.androidtest.MainActivity"
-        android:exported="true">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-        <intent-filter>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent-filter>
+    <uses-permission android:name="android.permission.INTERNET"/>
 
-    </activity>
+    <application
+        android:theme="@style/AppTheme"
+        android:label="دستیار شخصی"
+        android:usesCleartextTraffic="true">
 
-</application>
+        <activity
+            android:name="com.personalai.app.MainActivity"
+            android:exported="true">
+
+            <intent-filter>
+
+                <action android:name="android.intent.action.MAIN"/>
+
+                <category android:name="android.intent.category.LAUNCHER"/>
+
+            </intent-filter>
+
+        </activity>
+
+    </application>
 
 </manifest>

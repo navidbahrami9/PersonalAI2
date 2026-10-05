@@ -15,14 +15,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -53,20 +52,27 @@ data class Msg(
     val text: String
 )
 
-@Composable
+@androidx.compose.runtime.Composable
 fun PersonalAIApp() {
 
-    val messages = remember {
-        mutableStateListOf(
-            Msg(
-                "دستیار",
-                "سلام! من نسخه اول دستیار شخصی تو هستم. 🤖"
+    var messages by remember {
+        mutableStateOf(
+            listOf(
+                Msg(
+                    "assistant",
+                    "سلام! من نسخه اول دستیار شخصی تو هستم.\nهر چیزی می‌خواهی بپرس."
+                )
             )
         )
     }
 
-    var input by remember { mutableStateOf("") }
-    var sending by remember { mutableStateOf(false) }
+    var input by remember {
+        mutableStateOf("")
+    }
+
+    var sending by remember {
+        mutableStateOf(false)
+    }
 
     val scope = rememberCoroutineScope()
 
@@ -105,7 +111,11 @@ fun PersonalAIApp() {
                         ) {
 
                             Text(
-                                text = msg.role,
+                                text = if (msg.role == "user") {
+                                    "شما"
+                                } else {
+                                    "دستیار"
+                                },
                                 style = MaterialTheme.typography.labelLarge
                             )
 
@@ -127,11 +137,14 @@ fun PersonalAIApp() {
 
                 OutlinedTextField(
                     value = input,
-                    onValueChange = { input = it },
+                    onValueChange = {
+                        input = it
+                    },
                     modifier = Modifier.weight(1f),
                     placeholder = {
                         Text("پیامت را بنویس...")
                     },
+                    singleLine = true,
                     enabled = !sending
                 )
 
@@ -144,19 +157,22 @@ fun PersonalAIApp() {
                             return@Button
                         }
 
-                        messages.add(
-                            Msg("شما", question)
+                        input = ""
+
+                        messages = messages + Msg(
+                            "user",
+                            question
                         )
 
-                        input = ""
                         sending = true
 
                         scope.launch {
 
                             val answer = Api.chat(question)
 
-                            messages.add(
-                                Msg("دستیار", answer)
+                            messages = messages + Msg(
+                                "assistant",
+                                answer
                             )
 
                             sending = false
@@ -164,7 +180,9 @@ fun PersonalAIApp() {
                     },
                     enabled = !sending
                 ) {
-                    Text("ارسال")
+                    Text(
+                        if (sending) "..." else "ارسال"
+                    )
                 }
             }
         }
@@ -173,9 +191,6 @@ fun PersonalAIApp() {
 
 object Api {
 
-    /*
-     * llama-server روی همین گوشی اجرا می‌شود.
-     */
     private const val BASE =
         "http://127.0.0.1:8000/"
 
@@ -187,21 +202,23 @@ object Api {
 
             try {
 
-                val url =
-                    URL(BASE + "v1/chat/completions")
+                val url = URL(
+                    BASE + "v1/chat/completions"
+                )
 
                 connection =
                     url.openConnection() as HttpURLConnection
 
                 connection.requestMethod = "POST"
 
-                connection.connectTimeout = 10000
+                connection.connectTimeout = 10_000
+                connection.readTimeout = 30_000
 
-                connection.readTimeout = 120000
+                connection.doOutput = true
 
                 connection.setRequestProperty(
                     "Content-Type",
-                    "application/json"
+                    "application/json; charset=UTF-8"
                 )
 
                 connection.setRequestProperty(
@@ -209,19 +226,24 @@ object Api {
                     "application/json"
                 )
 
-                connection.doOutput = true
+                val escapedQuestion =
+                    question
+                        .replace("\\", "\\\\")
+                        .replace("\"", "\\\"")
+                        .replace("\n", "\\n")
+                        .replace("\r", "\\r")
 
                 val json = """
                     {
-                        "messages": [
-                            {
-                                "role": "user",
-                                "content": ${jsonString(question)}
-                            }
-                        ],
-                        "temperature": 0.7,
-                        "max_tokens": 512,
-                        "stream": false
+                      "messages": [
+                        {
+                          "role": "user",
+                          "content": "$escapedQuestion"
+                        }
+                      ],
+                      "temperature": 0.7,
+                      "max_tokens": 128,
+                      "stream": false
                     }
                 """.trimIndent()
 
@@ -237,44 +259,33 @@ object Api {
                 val responseCode =
                     connection.responseCode
 
-                val stream =
+                val responseText =
                     if (responseCode in 200..299) {
+
                         connection.inputStream
-                    } else {
-                        connection.errorStream
-                    }
-
-                val response =
-
-                    if (stream != null) {
-
-                        stream.bufferedReader().use {
-                            it.readText()
-                        }
+                            .bufferedReader(Charsets.UTF_8)
+                            .use {
+                                it.readText()
+                            }
 
                     } else {
 
-                        ""
+                        val errorText =
+                            connection.errorStream
+                                ?.bufferedReader(Charsets.UTF_8)
+                                ?.use {
+                                    it.readText()
+                                }
+                                ?: ""
+
+                        return@withContext "خطای سرور: HTTP $responseCode\n$errorText"
                     }
 
-                if (responseCode !in 200..299) {
-
-                    "خطای سرور: HTTP $responseCode\n$response"
-
-                } else {
-
-                    extractContent(response)
-                }
+                extractContent(responseText)
 
             } catch (e: Exception) {
 
-                val type =
-                    e.javaClass.simpleName
-
-                val message =
-                    e.message ?: "بدون پیام خطا"
-
-                "خطا در ارتباط با سرور:\n$type\n$message"
+                "خطا در ارتباط با سرور\n${e.javaClass.simpleName}: ${e.message}"
 
             } finally {
 
@@ -283,85 +294,42 @@ object Api {
         }
     }
 
-    private fun jsonString(value: String): String {
-
-        return "\"" +
-                value
-                    .replace("\\", "\\\\")
-                    .replace("\"", "\\\"")
-                    .replace("\n", "\\n")
-                    .replace("\r", "\\r")
-                    .replace("\t", "\\t") +
-                "\""
-    }
-
     private fun extractContent(json: String): String {
 
-        /*
-         * پاسخ llama-server در قالب OpenAI API:
-         *
-         * choices[0].message.content
-         *
-         * برای نسخه فعلی، محتوای content را از JSON استخراج می‌کنیم.
-         */
+        val marker = "\"content\":\""
 
-        val marker =
-            "\"content\":\""
-
-        val start =
-            json.indexOf(marker)
+        val start = json.indexOf(marker)
 
         if (start == -1) {
-
-            return "پاسخ دریافت شد، اما متن پاسخ قابل استخراج نیست:\n$json"
+            return "پاسخ نامعتبر از سرور:\n$json"
         }
 
         val contentStart =
             start + marker.length
 
-        val result =
-            StringBuilder()
+        val result = StringBuilder()
 
         var escaped = false
-
-        var i =
-            contentStart
+        var i = contentStart
 
         while (i < json.length) {
 
-            val c =
-                json[i]
+            val c = json[i]
 
             if (escaped) {
 
                 when (c) {
 
-                    'n' ->
-                        result.append('\n')
+                    'n' -> result.append('\n')
+                    'r' -> result.append('\r')
+                    't' -> result.append('\t')
+                    '"' -> result.append('"')
+                    '\\' -> result.append('\\')
 
-                    'r' ->
-                        result.append('\r')
-
-                    't' ->
-                        result.append('\t')
-
-                    '"' ->
-                        result.append('"')
-
-                    '\\' ->
+                    else -> {
                         result.append('\\')
-
-                    '/' ->
-                        result.append('/')
-
-                    'b' ->
-                        result.append('\b')
-
-                    'f' ->
-                        result.append('\u000C')
-
-                    else ->
                         result.append(c)
+                    }
                 }
 
                 escaped = false
@@ -370,27 +338,27 @@ object Api {
 
                 when (c) {
 
-                    '\\' ->
+                    '\\' -> {
                         escaped = true
+                    }
 
-                    '"' ->
+                    '"' -> {
                         break
+                    }
 
-                    else ->
+                    else -> {
                         result.append(c)
+                    }
                 }
             }
 
             i++
         }
 
-        val answer =
-            result.toString().trim()
-
-        return if (answer.isEmpty()) {
-            "پاسخ خالی از سرور دریافت شد."
-        } else {
-            answer
-        }
+        return result.toString()
+            .trim()
+            .ifEmpty {
+                "پاسخ خالی از مدل دریافت شد."
+            }
     }
 }

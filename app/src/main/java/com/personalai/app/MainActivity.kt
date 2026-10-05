@@ -15,22 +15,25 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -52,16 +55,14 @@ data class Msg(
     val text: String
 )
 
-@androidx.compose.runtime.Composable
+@Composable
 fun PersonalAIApp() {
 
-    var messages by remember {
-        mutableStateOf(
-            listOf(
-                Msg(
-                    "assistant",
-                    "سلام! من نسخه اول دستیار شخصی تو هستم.\nهر چیزی می‌خواهی بپرس."
-                )
+    val messages = remember {
+        mutableStateListOf(
+            Msg(
+                "assistant",
+                "سلام! من نسخه اول دستیار شخصی تو هستم.\nهر چیزی می‌خواهی بپرس."
             )
         )
     }
@@ -100,7 +101,12 @@ fun PersonalAIApp() {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
 
-                items(messages) { msg ->
+                items(
+                    items = messages,
+                    key = { msg ->
+                        "${msg.role}_${msg.text}_${messages.indexOf(msg)}"
+                    }
+                ) { msg ->
 
                     Card(
                         modifier = Modifier.fillMaxWidth()
@@ -159,9 +165,11 @@ fun PersonalAIApp() {
 
                         input = ""
 
-                        messages = messages + Msg(
-                            "user",
-                            question
+                        messages.add(
+                            Msg(
+                                "user",
+                                question
+                            )
                         )
 
                         sending = true
@@ -170,9 +178,11 @@ fun PersonalAIApp() {
 
                             val answer = Api.chat(question)
 
-                            messages = messages + Msg(
-                                "assistant",
-                                answer
+                            messages.add(
+                                Msg(
+                                    "assistant",
+                                    answer
+                                )
                             )
 
                             sending = false
@@ -211,8 +221,10 @@ object Api {
 
                 connection.requestMethod = "POST"
 
-                connection.connectTimeout = 10_000
-                connection.readTimeout = 30_000
+                connection.connectTimeout = 15_000
+
+                // Qwen روی گوشی ممکن است زمان بیشتری برای تولید پاسخ بخواهد.
+                connection.readTimeout = 120_000
 
                 connection.doOutput = true
 
@@ -242,7 +254,7 @@ object Api {
                         }
                       ],
                       "temperature": 0.7,
-                      "max_tokens": 128,
+                      "max_tokens": 256,
                       "stream": false
                     }
                 """.trimIndent()
@@ -278,10 +290,12 @@ object Api {
                                 }
                                 ?: ""
 
-                        return@withContext "خطای سرور: HTTP $responseCode\n$errorText"
+                        return@withContext(
+                            "خطای سرور: HTTP $responseCode\n$errorText"
+                        )
                     }
 
-                extractContent(responseText)
+                extractAnswer(responseText)
 
             } catch (e: Exception) {
 
@@ -294,71 +308,48 @@ object Api {
         }
     }
 
-    private fun extractContent(json: String): String {
+    private fun extractAnswer(json: String): String {
 
-        val marker = "\"content\":\""
+        return try {
 
-        val start = json.indexOf(marker)
+            val root =
+                JSONObject(json)
 
-        if (start == -1) {
-            return "پاسخ نامعتبر از سرور:\n$json"
-        }
+            val choices =
+                root.getJSONArray("choices")
 
-        val contentStart =
-            start + marker.length
-
-        val result = StringBuilder()
-
-        var escaped = false
-        var i = contentStart
-
-        while (i < json.length) {
-
-            val c = json[i]
-
-            if (escaped) {
-
-                when (c) {
-
-                    'n' -> result.append('\n')
-                    'r' -> result.append('\r')
-                    't' -> result.append('\t')
-                    '"' -> result.append('"')
-                    '\\' -> result.append('\\')
-
-                    else -> {
-                        result.append('\\')
-                        result.append(c)
-                    }
-                }
-
-                escaped = false
-
-            } else {
-
-                when (c) {
-
-                    '\\' -> {
-                        escaped = true
-                    }
-
-                    '"' -> {
-                        break
-                    }
-
-                    else -> {
-                        result.append(c)
-                    }
-                }
+            if (choices.length() == 0) {
+                return "مدل پاسخی برنگرداند."
             }
 
-            i++
-        }
+            val message =
+                choices
+                    .getJSONObject(0)
+                    .getJSONObject("message")
 
-        return result.toString()
-            .trim()
-            .ifEmpty {
-                "پاسخ خالی از مدل دریافت شد."
+            // حالت عادی OpenAI-compatible
+            val content =
+                message.optString("content", "").trim()
+
+            if (content.isNotEmpty()) {
+                return content
             }
+
+            // Qwen3 ممکن است پاسخ را اینجا قرار دهد.
+            val reasoning =
+                message
+                    .optString("reasoning_content", "")
+                    .trim()
+
+            if (reasoning.isNotEmpty()) {
+                return reasoning
+            }
+
+            "پاسخ خالی از مدل دریافت شد."
+
+        } catch (e: Exception) {
+
+            "خطا در خواندن پاسخ مدل\n${e.javaClass.simpleName}: ${e.message}"
+        }
     }
 }

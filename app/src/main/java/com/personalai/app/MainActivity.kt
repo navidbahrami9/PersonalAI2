@@ -1,4 +1,5 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.personalai.app
 
 import android.os.Bundle
@@ -16,18 +17,21 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -49,7 +53,7 @@ data class Msg(
     val text: String
 )
 
-@androidx.compose.runtime.Composable
+@Composable
 fun PersonalAIApp() {
 
     val messages = remember {
@@ -63,6 +67,7 @@ fun PersonalAIApp() {
 
     var input by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
+
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -170,73 +175,111 @@ object Api {
 
     /*
      * llama-server روی همین گوشی اجرا می‌شود.
-     * بنابراین 127.0.0.1 یعنی همین گوشی.
      */
     private const val BASE =
         "http://127.0.0.1:8000/"
 
     suspend fun chat(question: String): String {
 
-        return try {
+        return withContext(Dispatchers.IO) {
 
-            val url = URL(BASE + "v1/chat/completions")
+            var connection: HttpURLConnection? = null
 
-            val connection =
-                url.openConnection() as HttpURLConnection
+            try {
 
-            connection.requestMethod = "POST"
-            connection.connectTimeout = 10000
-            connection.readTimeout = 120000
+                val url =
+                    URL(BASE + "v1/chat/completions")
 
-            connection.setRequestProperty(
-                "Content-Type",
-                "application/json"
-            )
+                connection =
+                    url.openConnection() as HttpURLConnection
 
-            connection.doOutput = true
+                connection.requestMethod = "POST"
 
-            val json = """
-                {
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": ${jsonString(question)}
+                connection.connectTimeout = 10000
+
+                connection.readTimeout = 120000
+
+                connection.setRequestProperty(
+                    "Content-Type",
+                    "application/json"
+                )
+
+                connection.setRequestProperty(
+                    "Accept",
+                    "application/json"
+                )
+
+                connection.doOutput = true
+
+                val json = """
+                    {
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": ${jsonString(question)}
+                            }
+                        ],
+                        "temperature": 0.7,
+                        "max_tokens": 512,
+                        "stream": false
+                    }
+                """.trimIndent()
+
+                connection.outputStream.use { output ->
+
+                    output.write(
+                        json.toByteArray(Charsets.UTF_8)
+                    )
+
+                    output.flush()
+                }
+
+                val responseCode =
+                    connection.responseCode
+
+                val stream =
+                    if (responseCode in 200..299) {
+                        connection.inputStream
+                    } else {
+                        connection.errorStream
+                    }
+
+                val response =
+
+                    if (stream != null) {
+
+                        stream.bufferedReader().use {
+                            it.readText()
                         }
-                    ],
-                    "temperature": 0.7,
-                    "max_tokens": 512
-                }
-            """.trimIndent()
 
-            connection.outputStream.use { output ->
-                output.write(json.toByteArray(Charsets.UTF_8))
-            }
+                    } else {
 
-            val responseCode = connection.responseCode
+                        ""
+                    }
 
-            val stream =
-                if (responseCode in 200..299) {
-                    connection.inputStream
+                if (responseCode !in 200..299) {
+
+                    "خطای سرور: HTTP $responseCode\n$response"
+
                 } else {
-                    connection.errorStream
+
+                    extractContent(response)
                 }
 
-            val response =
-                stream.bufferedReader().use {
-                    it.readText()
-                }
+            } catch (e: Exception) {
 
-            connection.disconnect()
+                val type =
+                    e.javaClass.simpleName
 
-            if (responseCode !in 200..299) {
-                "خطای سرور: HTTP $responseCode\n$response"
-            } else {
-                extractContent(response)
+                val message =
+                    e.message ?: "بدون پیام خطا"
+
+                "خطا در ارتباط با سرور:\n$type\n$message"
+
+            } finally {
+
+                connection?.disconnect()
             }
-
-        } catch (e: Exception) {
-
-            "خطا در ارتباط با سرور محلی:\n${e.message}"
         }
     }
 
@@ -254,34 +297,71 @@ object Api {
 
     private fun extractContent(json: String): String {
 
-        val marker = "\"content\":\""
+        /*
+         * پاسخ llama-server در قالب OpenAI API:
+         *
+         * choices[0].message.content
+         *
+         * برای نسخه فعلی، محتوای content را از JSON استخراج می‌کنیم.
+         */
 
-        val start = json.indexOf(marker)
+        val marker =
+            "\"content\":\""
+
+        val start =
+            json.indexOf(marker)
 
         if (start == -1) {
-            return json
+
+            return "پاسخ دریافت شد، اما متن پاسخ قابل استخراج نیست:\n$json"
         }
 
-        val contentStart = start + marker.length
+        val contentStart =
+            start + marker.length
 
-        val result = StringBuilder()
+        val result =
+            StringBuilder()
 
         var escaped = false
-        var i = contentStart
+
+        var i =
+            contentStart
 
         while (i < json.length) {
 
-            val c = json[i]
+            val c =
+                json[i]
 
             if (escaped) {
 
                 when (c) {
-                    'n' -> result.append('\n')
-                    'r' -> result.append('\r')
-                    't' -> result.append('\t')
-                    '"' -> result.append('"')
-                    '\\' -> result.append('\\')
-                    else -> result.append(c)
+
+                    'n' ->
+                        result.append('\n')
+
+                    'r' ->
+                        result.append('\r')
+
+                    't' ->
+                        result.append('\t')
+
+                    '"' ->
+                        result.append('"')
+
+                    '\\' ->
+                        result.append('\\')
+
+                    '/' ->
+                        result.append('/')
+
+                    'b' ->
+                        result.append('\b')
+
+                    'f' ->
+                        result.append('\u000C')
+
+                    else ->
+                        result.append(c)
                 }
 
                 escaped = false
@@ -290,17 +370,27 @@ object Api {
 
                 when (c) {
 
-                    '\\' -> escaped = true
+                    '\\' ->
+                        escaped = true
 
-                    '"' -> break
+                    '"' ->
+                        break
 
-                    else -> result.append(c)
+                    else ->
+                        result.append(c)
                 }
             }
 
             i++
         }
 
-        return result.toString()
+        val answer =
+            result.toString().trim()
+
+        return if (answer.isEmpty()) {
+            "پاسخ خالی از سرور دریافت شد."
+        } else {
+            answer
+        }
     }
 }

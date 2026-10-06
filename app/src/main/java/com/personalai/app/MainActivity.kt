@@ -24,14 +24,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -57,7 +59,26 @@ data class Msg(
 @Composable
 fun PersonalAIApp() {
 
-    val messages = remember {
+    // 🔴 تغییر: ذخیره پیام‌ها برای حفظ چت هنگام چرخاندن گوشی
+    val messages = rememberSaveable(
+        saver = listSaver(
+            save = { list ->
+                list.map { msg ->
+                    listOf(msg.role, msg.text)
+                }
+            },
+            restore = { saved ->
+                mutableStateListOf(
+                    *saved.map { item ->
+                        Msg(
+                            role = item[0],
+                            text = item[1]
+                        )
+                    }.toTypedArray()
+                )
+            }
+        )
+    ) {
         mutableStateListOf(
             Msg(
                 "assistant",
@@ -66,11 +87,11 @@ fun PersonalAIApp() {
         )
     }
 
-    var input by remember {
+    var input by rememberSaveable {
         mutableStateOf("")
     }
 
-    var sending by remember {
+    var sending by rememberSaveable {
         mutableStateOf(false)
     }
 
@@ -172,7 +193,10 @@ fun PersonalAIApp() {
 
                         scope.launch {
 
-                            val answer = Api.chat(question)
+                            // 🔴 تغییر: ارسال کل تاریخچه مکالمه
+                            val answer = Api.chat(
+                                messages.toList()
+                            )
 
                             messages.add(
                                 Msg("assistant", answer)
@@ -202,7 +226,16 @@ object Api {
     private const val BASE =
         "http://127.0.0.1:8000/"
 
-    suspend fun chat(question: String): String {
+    // 🔴 تغییر: دستور ثابت برای پاسخ فارسی
+    private const val SYSTEM_PROMPT =
+        "تو دستیار شخصی من هستی. " +
+        "همیشه به زبان فارسی پاسخ بده. " +
+        "پاسخ را مستقیم، طبیعی و کوتاه ارائه کن. " +
+        "متن فکر کردن یا reasoning داخلی خودت را نمایش نده."
+
+    suspend fun chat(
+        messages: List<Msg>
+    ): String {
 
         return withContext(Dispatchers.IO) {
 
@@ -220,6 +253,7 @@ object Api {
 
                 connection.connectTimeout = 30_000
 
+                // 🔴 تغییر: حداکثر ۳ دقیقه برای پاسخ مدل
                 connection.readTimeout = 180_000
 
                 connection.doOutput = true
@@ -234,30 +268,62 @@ object Api {
                     "application/json"
                 )
 
-                val escapedQuestion = question
-                    .replace("\\", "\\\\")
-                    .replace("\"", "\\\"")
-                    .replace("\n", "\\n")
-                    .replace("\r", "\\r")
+                // 🔴 تغییر: ساخت JSON با JSONArray/JSONObject
+                // تا مشکل Escape شدن متن فارسی و علامت‌ها کمتر شود.
+                val jsonMessages = JSONArray()
 
-                val json = """
-                    {
-                      "messages": [
-                        {
-                          "role": "user",
-                          "content": "$escapedQuestion"
+                val systemMessage = JSONObject()
+                systemMessage.put("role", "system")
+                systemMessage.put("content", SYSTEM_PROMPT)
+                jsonMessages.put(systemMessage)
+
+                for (msg in messages) {
+
+                    val message = JSONObject()
+
+                    message.put(
+                        "role",
+                        if (msg.role == "user") {
+                            "user"
+                        } else {
+                            "assistant"
                         }
-                      ],
-                      "temperature": 0.7,
-                      "max_tokens": 64,
-                      "stream": false
-                    }
-                """.trimIndent()
+                    )
+
+                    message.put("content", msg.text)
+
+                    jsonMessages.put(message)
+                }
+
+                val request = JSONObject()
+
+                request.put(
+                    "messages",
+                    jsonMessages
+                )
+
+                request.put(
+                    "temperature",
+                    0.7
+                )
+
+                // 🔴 تغییر: پاسخ کوتاه‌تر و سریع‌تر
+                request.put(
+                    "max_tokens",
+                    64
+                )
+
+                request.put(
+                    "stream",
+                    false
+                )
 
                 connection.outputStream.use { output ->
 
                     output.write(
-                        json.toByteArray(Charsets.UTF_8)
+                        request
+                            .toString()
+                            .toByteArray(Charsets.UTF_8)
                     )
 
                     output.flush()
@@ -294,6 +360,8 @@ object Api {
 
             } catch (e: Exception) {
 
+                // 🔴 تغییر: خطای شبکه به متن تبدیل می‌شود
+                // و نباید باعث بسته شدن برنامه شود.
                 "خطا در ارتباط با سرور\n" +
                         "${e.javaClass.simpleName}: ${e.message}"
 
@@ -314,16 +382,20 @@ object Api {
                 JSONObject(json)
 
             val choices =
-                root.getJSONArray("choices")
+                root.optJSONArray("choices")
 
-            if (choices.length() == 0) {
+            if (choices == null || choices.length() == 0) {
                 return "مدل پاسخی برنگرداند."
             }
 
             val message =
                 choices
-                    .getJSONObject(0)
-                    .getJSONObject("message")
+                    .optJSONObject(0)
+                    ?.optJSONObject("message")
+
+            if (message == null) {
+                return "پاسخ مدل قابل خواندن نبود."
+            }
 
             val content =
                 message
@@ -334,6 +406,8 @@ object Api {
                 return content
             }
 
+            // 🔴 تغییر: فقط اگر content خالی بود،
+            // reasoning به عنوان آخرین راه استفاده می‌شود.
             val reasoning =
                 message
                     .optString("reasoning_content", "")

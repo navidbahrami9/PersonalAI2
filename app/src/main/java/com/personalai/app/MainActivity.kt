@@ -27,7 +27,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -166,10 +165,7 @@ fun PersonalAIApp() {
                         input = ""
 
                         messages.add(
-                            Msg(
-                                "user",
-                                question
-                            )
+                            Msg("user", question)
                         )
 
                         sending = true
@@ -179,10 +175,7 @@ fun PersonalAIApp() {
                             val answer = Api.chat(question)
 
                             messages.add(
-                                Msg(
-                                    "assistant",
-                                    answer
-                                )
+                                Msg("assistant", answer)
                             )
 
                             sending = false
@@ -190,8 +183,13 @@ fun PersonalAIApp() {
                     },
                     enabled = !sending
                 ) {
+
                     Text(
-                        if (sending) "..." else "ارسال"
+                        if (sending) {
+                            "..."
+                        } else {
+                            "ارسال"
+                        }
                     )
                 }
             }
@@ -212,19 +210,17 @@ object Api {
 
             try {
 
-                val url = URL(
-                    BASE + "v1/chat/completions"
-                )
+                val url =
+                    URL(BASE + "v1/chat/completions")
 
                 connection =
                     url.openConnection() as HttpURLConnection
 
                 connection.requestMethod = "POST"
 
-                connection.connectTimeout = 15_000
+                connection.connectTimeout = 30_000
 
-                // Qwen روی گوشی ممکن است زمان بیشتری برای تولید پاسخ بخواهد.
-                connection.readTimeout = 120_000
+                connection.readTimeout = 180_000
 
                 connection.doOutput = true
 
@@ -238,12 +234,11 @@ object Api {
                     "application/json"
                 )
 
-                val escapedQuestion =
-                    question
-                        .replace("\\", "\\\\")
-                        .replace("\"", "\\\"")
-                        .replace("\n", "\\n")
-                        .replace("\r", "\\r")
+                val escapedQuestion = question
+                    .replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\n", "\\n")
+                    .replace("\r", "\\r")
 
                 val json = """
                     {
@@ -254,7 +249,7 @@ object Api {
                         }
                       ],
                       "temperature": 0.7,
-                      "max_tokens": 256,
+                      "max_tokens": 64,
                       "stream": false
                     }
                 """.trimIndent()
@@ -299,7 +294,8 @@ object Api {
 
             } catch (e: Exception) {
 
-                "خطا در ارتباط با سرور\n${e.javaClass.simpleName}: ${e.message}"
+                "خطا در ارتباط با سرور\n" +
+                        "${e.javaClass.simpleName}: ${e.message}"
 
             } finally {
 
@@ -308,7 +304,9 @@ object Api {
         }
     }
 
-    private fun extractAnswer(json: String): String {
+    private fun extractAnswer(
+        json: String
+    ): String {
 
         return try {
 
@@ -327,15 +325,15 @@ object Api {
                     .getJSONObject(0)
                     .getJSONObject("message")
 
-            // حالت عادی OpenAI-compatible
             val content =
-                message.optString("content", "").trim()
+                message
+                    .optString("content", "")
+                    .trim()
 
             if (content.isNotEmpty()) {
                 return content
             }
 
-            // Qwen3 ممکن است پاسخ را اینجا قرار دهد.
             val reasoning =
                 message
                     .optString("reasoning_content", "")
@@ -349,7 +347,8 @@ object Api {
 
         } catch (e: Exception) {
 
-            "خطا در خواندن پاسخ مدل\n${e.javaClass.simpleName}: ${e.message}"
+            "خطا در خواندن پاسخ مدل\n" +
+                    "${e.javaClass.simpleName}: ${e.message}"
         }
     }
 }

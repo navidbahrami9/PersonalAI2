@@ -305,11 +305,10 @@ object Api {
                 systemMessage.put("content", SYSTEM_PROMPT)
                 jsonMessages.put(systemMessage)
 
-                val latestUserIndex = messages.indexOfLast { it.role == "user" }
-
                 // Keep the encrypted archive complete, but send only a bounded recent window.
                 // The local Qwen server is configured with a 1024-token context.
                 val requestHistory = boundedHistory(messages)
+                val latestUserIndex = requestHistory.indexOfLast { it.role == "user" }
 
                 for ((index, msg) in requestHistory.withIndex()) {
 

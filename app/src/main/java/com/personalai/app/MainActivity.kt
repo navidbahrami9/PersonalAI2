@@ -3,6 +3,7 @@
 package com.personalai.app
 
 import android.os.Bundle
+import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -206,7 +207,7 @@ fun PersonalAIApp() {
                                     )
                                 }
 
-                                val answer = Api.chat(messages.toList())
+                                val answer = Api.chat(context, messages.toList())
                                 messages.add(Msg("assistant", answer))
 
                                 runCatching {
@@ -262,6 +263,7 @@ object Api {
         "متن فکر کردن یا reasoning داخلی خودت را نمایش نده."
 
     suspend fun chat(
+        context: Context,
         messages: List<Msg>
     ): String {
 
@@ -305,7 +307,9 @@ object Api {
                 systemMessage.put("content", SYSTEM_PROMPT)
                 jsonMessages.put(systemMessage)
 
-                for (msg in messages) {
+                val latestUserIndex = messages.indexOfLast { it.role == "user" }
+
+                for ((index, msg) in messages.withIndex()) {
 
                     val message = JSONObject()
 
@@ -318,7 +322,12 @@ object Api {
                         }
                     )
 
-                    message.put("content", msg.text)
+                    val content = if (index == latestUserIndex) {
+                        RayanMemoryContext.withMemory(context, msg.text)
+                    } else {
+                        msg.text
+                    }
+                    message.put("content", content)
 
                     jsonMessages.put(message)
                 }

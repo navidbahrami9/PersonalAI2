@@ -11,8 +11,8 @@ object RayanMemoryContext {
         val memory = try {
             RayanScreenMemoryRepository.readRecentContext(
                 context = context,
-                maxRecords = 12,
-                maxChars = 6000
+                maxRecords = 8,
+                maxChars = 1200
             )
         } catch (_: Exception) {
             // Memory retrieval must never prevent an ordinary chat request.

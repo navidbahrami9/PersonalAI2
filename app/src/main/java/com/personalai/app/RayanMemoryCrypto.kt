@@ -71,7 +71,10 @@ object RayanMemoryCrypto {
                     if (first == -1) break
                     val rest = ByteArray(9)
                     input.readFully(rest)
-                    val header = ByteBuffer.allocate(10).put(first.toByte()).put(rest).flip()
+                    val header = ByteBuffer.allocate(10)
+                    header.put(first.toByte())
+                    header.put(rest)
+                    header.flip()
                     val magic = header.int
                     val version = header.get().toInt() and 0xff
                     val ivLength = header.get().toInt() and 0xff

@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
@@ -125,12 +125,10 @@ fun PersonalAIApp() {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
 
-                items(
+                itemsIndexed(
                     items = messages,
-                    key = { msg ->
-                        "${msg.role}_${msg.text}_${messages.indexOf(msg)}"
-                    }
-                ) { msg ->
+                    key = { index, msg -> "${msg.role}_$index" }
+                ) { _, msg ->
 
                     Card(
                         modifier = Modifier.fillMaxWidth()
@@ -309,7 +307,11 @@ object Api {
 
                 val latestUserIndex = messages.indexOfLast { it.role == "user" }
 
-                for ((index, msg) in messages.withIndex()) {
+                // Keep the encrypted archive complete, but send only a bounded recent window.
+                // The local Qwen server is configured with a 1024-token context.
+                val requestHistory = boundedHistory(messages)
+
+                for ((index, msg) in requestHistory.withIndex()) {
 
                     val message = JSONObject()
 
@@ -407,6 +409,29 @@ object Api {
                 connection?.disconnect()
             }
         }
+    }
+
+    private const val MAX_HISTORY_MESSAGES = 8
+    private const val MAX_HISTORY_CHARS = 1800
+
+    /**
+     * Preserve the newest context while preventing an ever-growing archive
+     * from overflowing the local model's small context window.
+     */
+    private fun boundedHistory(messages: List<Msg>): List<Msg> {
+        var remaining = MAX_HISTORY_CHARS
+        val newestFirst = ArrayList<Msg>()
+
+        for (message in messages.asReversed().take(MAX_HISTORY_MESSAGES)) {
+            if (remaining <= 0) break
+            val boundedText = message.text.take(remaining)
+            if (boundedText.isNotEmpty()) {
+                newestFirst.add(message.copy(text = boundedText))
+                remaining -= boundedText.length
+            }
+        }
+
+        return newestFirst.asReversed()
     }
 
     private fun extractAnswer(

@@ -76,7 +76,7 @@ fun PersonalAIApp() {
                 messages.add(
                     Msg(
                         "assistant",
-                        "سلام! من نسخه اول دستیار شخصی تو هستم.\\nهر چیزی می‌خواهی بپرس."
+                        "سلام! من نسخه اول دستیار شخصی تو هستم.\nهر چیزی می‌خواهی بپرس."
                     )
                 )
             } else {
@@ -174,7 +174,7 @@ fun PersonalAIApp() {
                         Text("پیامت را بنویس...")
                     },
                     singleLine = true,
-                    enabled = !sending
+                    enabled = !sending && historyLoaded
                 )
 
                 Button(
@@ -233,7 +233,7 @@ fun PersonalAIApp() {
                             }
                         }
                     },
-                    enabled = !sending
+                    enabled = !sending && historyLoaded
                 ) {
 
                     Text(

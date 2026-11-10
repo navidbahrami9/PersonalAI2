@@ -21,14 +21,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -59,32 +61,33 @@ data class Msg(
 @Composable
 fun PersonalAIApp() {
 
-    // 🔴 تغییر: ذخیره پیام‌ها برای حفظ چت هنگام چرخاندن گوشی
-    val messages = rememberSaveable(
-        saver = listSaver(
-            save = { list ->
-                list.map { msg ->
-                    listOf(msg.role, msg.text)
-                }
-            },
-            restore = { saved ->
-                mutableStateListOf(
-                    *saved.map { item ->
-                        Msg(
-                            role = item[0],
-                            text = item[1]
-                        )
-                    }.toTypedArray()
+    val context = LocalContext.current
+    val messages = remember { mutableStateListOf<Msg>() }
+    var historyLoaded by remember { mutableStateOf(false) }
+    var historyError by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        val result = withContext(Dispatchers.IO) {
+            runCatching { RayanConversationArchive.readAll(context) }
+        }
+        result.onSuccess { archived ->
+            messages.clear()
+            if (archived.isEmpty()) {
+                messages.add(
+                    Msg(
+                        "assistant",
+                        "سلام! من نسخه اول دستیار شخصی تو هستم.\\nهر چیزی می‌خواهی بپرس."
+                    )
                 )
+            } else {
+                messages.addAll(archived.map { Msg(it.role, it.text) })
             }
-        )
-    ) {
-        mutableStateListOf(
-            Msg(
-                "assistant",
-                "سلام! من نسخه اول دستیار شخصی تو هستم.\nهر چیزی می‌خواهی بپرس."
-            )
-        )
+        }.onFailure { error ->
+            historyError = "بازیابی تاریخچه ناموفق بود: ${error.message ?: error.javaClass.simpleName}"
+            messages.clear()
+            messages.add(Msg("assistant", "تاریخچه قابل بازیابی نیست؛ برای جلوگیری از بازنویسی، ارسال پیام موقتاً غیرفعال است."))
+        }
+        historyLoaded = true
     }
 
     var input by rememberSaveable {
@@ -192,17 +195,42 @@ fun PersonalAIApp() {
                         sending = true
 
                         scope.launch {
+                            try {
+                                withContext(Dispatchers.IO) {
+                                    RayanConversationArchive.append(
+                                        context = context,
+                                        role = "user",
+                                        text = question,
+                                        origin = "typed",
+                                        status = "sent"
+                                    )
+                                }
 
-                            // 🔴 تغییر: ارسال کل تاریخچه مکالمه
-                            val answer = Api.chat(
-                                messages.toList()
-                            )
+                                val answer = Api.chat(messages.toList())
+                                messages.add(Msg("assistant", answer))
 
-                            messages.add(
-                                Msg("assistant", answer)
-                            )
-
-                            sending = false
+                                runCatching {
+                                    withContext(Dispatchers.IO) {
+                                        RayanConversationArchive.append(
+                                            context = context,
+                                            role = "assistant",
+                                            text = answer,
+                                            origin = "assistant",
+                                            status = "complete"
+                                        )
+                                    }
+                                }.onFailure { error ->
+                                    messages.add(
+                                        Msg("assistant", "هشدار: پاسخ دریافت شد، اما ذخیرهٔ آن در آرشیو ناموفق بود: ${error.message ?: error.javaClass.simpleName}")
+                                    )
+                                }
+                            } catch (error: Exception) {
+                                messages.add(
+                                    Msg("assistant", "ارسال پیام ناموفق بود: ${error.message ?: error.javaClass.simpleName}")
+                                )
+                            } finally {
+                                sending = false
+                            }
                         }
                     },
                     enabled = !sending
@@ -310,7 +338,7 @@ object Api {
                 // 🔴 تغییر: پاسخ کوتاه‌تر و سریع‌تر
                 request.put(
                     "max_tokens",
-                    64
+                    256
                 )
 
                 request.put(
@@ -406,18 +434,7 @@ object Api {
                 return content
             }
 
-            // 🔴 تغییر: فقط اگر content خالی بود،
-            // reasoning به عنوان آخرین راه استفاده می‌شود.
-            val reasoning =
-                message
-                    .optString("reasoning_content", "")
-                    .trim()
-
-            if (reasoning.isNotEmpty()) {
-                return reasoning
-            }
-
-            "پاسخ خالی از مدل دریافت شد."
+            "پاسخ متنی از مدل دریافت نشد."
 
         } catch (e: Exception) {
 

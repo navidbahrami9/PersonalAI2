@@ -87,7 +87,7 @@ fun PersonalAIApp() {
             messages.clear()
             messages.add(Msg("assistant", "تاریخچه قابل بازیابی نیست؛ برای جلوگیری از بازنویسی، ارسال پیام موقتاً غیرفعال است."))
         }
-        historyLoaded = true
+        historyLoaded = result.isSuccess
     }
 
     var input by rememberSaveable {

@@ -49,6 +49,18 @@ object RayanConversationArchive {
         val origin: String
     )
 
+    /** Returns the stable conversation ID, creating it durably when needed. */
+    @Throws(Exception::class)
+    fun currentConversationId(context: Context): String = synchronized(lock) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(CONVERSATION_KEY, null) ?: UUID.randomUUID().toString().also { id ->
+                check(
+                    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                        .edit().putString(CONVERSATION_KEY, id).commit()
+                ) { "Could not persist conversation ID" }
+            }
+    }
+
     @Throws(Exception::class)
     fun append(
         context: Context,

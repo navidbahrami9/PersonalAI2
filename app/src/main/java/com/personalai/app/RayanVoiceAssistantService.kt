@@ -89,7 +89,9 @@ class RayanVoiceAssistantService : Service() {
                     val db = if (rms <= 0.0) -90.0 else 20.0 * log10(rms)
                     sendBroadcast(Intent(RayanVoiceCaptureService.ACTION_LEVEL).setPackage(packageName)
                         .putExtra(RayanVoiceCaptureService.EXTRA_LEVEL_DB, db.toFloat()))
-                    if (db > -55.0 && wake(asr.transcribe(audio))) handleCommand(asr)
+                    if (db > -55.0 && wake(asr.transcribe(audio)) &&
+                        RayanOwnerVoiceVerifier.isLikelyOwner(this, audio)
+                    ) handleCommand(asr)
                 } finally { audio.fill(0f) }
             }
         } catch (e: Exception) {

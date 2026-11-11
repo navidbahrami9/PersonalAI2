@@ -44,7 +44,9 @@ class RayanVoiceControlActivity : ComponentActivity() {
             MaterialTheme {
                 VoiceControlPanel(
                     onStart = { requestPermissionsAndStart() },
-                    onStop = { stopVoiceCapture() }
+                    onStop = { stopVoiceCapture() },
+                    onEnrollment = { startActivity(Intent(this, RayanVoiceEnrollmentActivity::class.java)) },
+                    onCalibration = { startActivity(Intent(this, RayanVoiceCalibrationActivity::class.java)) }
                 )
             }
         }
@@ -84,7 +86,12 @@ class RayanVoiceControlActivity : ComponentActivity() {
 }
 
 @Composable
-private fun VoiceControlPanel(onStart: () -> Unit, onStop: () -> Unit) {
+private fun VoiceControlPanel(
+    onStart: () -> Unit,
+    onStop: () -> Unit,
+    onEnrollment: () -> Unit,
+    onCalibration: () -> Unit
+) {
     var status by remember { mutableStateOf("میکروفون خاموش است.") }
     var level by remember { mutableStateOf(-90f) }
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -117,6 +124,9 @@ private fun VoiceControlPanel(onStart: () -> Unit, onStop: () -> Unit) {
         Text("سطح ورودی: ${level.toInt()} dBFS")
         Button(onClick = onStart, modifier = Modifier.fillMaxWidth()) { Text("شروع میکروفون") }
         Button(onClick = onStop, modifier = Modifier.fillMaxWidth()) { Text("توقف میکروفون") }
+        Button(onClick = onEnrollment, modifier = Modifier.fillMaxWidth()) { Text("ثبت سه نمونه صدای من") }
+        Button(onClick = onCalibration, modifier = Modifier.fillMaxWidth()) { Text("کالیبراسیون با صدای خانواده") }
+        Text("ابتدا ثبت صدای مالک و سپس حداقل سه نمونهٔ مالک و سه نمونهٔ غیرمالک را انجام بده. برای ثبت نمونه‌ها، میکروفون دستیار را متوقف کن.")
         Text("برای توقف، دکمهٔ توقف یا اعلان دائمی را بزن. واژهٔ بیدارباش «رایان» است؛ پیش از هر فرمان، عبارت تصادفی و صدای مالک بررسی می‌شود. پردازش آفلاین است.")
     }
 }

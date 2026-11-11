@@ -21,6 +21,12 @@ object RayanOwnerVoiceVerifier {
      * is recognized exactly and the speaker score clears the locally calibrated
      * owner-vs-family threshold. Callers must discard the audio buffer afterward.
      */
+    fun isLikelyOwner(context: android.content.Context, samples: FloatArray): Boolean {
+        val calibration = RayanVoiceCalibrationStore.load(context) ?: return false
+        if (calibration.modelId != RayanSpeakerEmbeddingEngine.MODEL_ID) return false
+        return RayanSpeakerEmbeddingEngine(context).use { it.score(samples) >= calibration.threshold }
+    }
+
     fun verifyAndIssue(
         context: android.content.Context,
         samples: FloatArray,

@@ -6,11 +6,14 @@ package com.personalai.app
  * is installed. Consequently, speech commands remain fail-closed for now.
  */
 object RayanOwnerVoiceVerifier {
-    class Session private constructor(
-        private val expiresAtElapsedRealtime: Long
+    private object Issuer
+    class Session internal constructor(
+        private val expiresAtElapsedRealtime: Long,
+        private val issuer: Any
     ) {
         internal fun isValid(): Boolean =
-            android.os.SystemClock.elapsedRealtime() < expiresAtElapsedRealtime
+            issuer === Issuer &&
+                android.os.SystemClock.elapsedRealtime() < expiresAtElapsedRealtime
     }
 
     /**
@@ -35,7 +38,7 @@ object RayanOwnerVoiceVerifier {
         val score = RayanSpeakerEmbeddingEngine(context).use { it.score(samples) }
         if (score < calibration.threshold) return null
 
-        return Session(android.os.SystemClock.elapsedRealtime() + 20_000L)
+        return Session(android.os.SystemClock.elapsedRealtime() + 20_000L, Issuer)
     }
 
     private fun normalizeChallenge(value: String): String =

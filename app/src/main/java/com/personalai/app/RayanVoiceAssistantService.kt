@@ -8,6 +8,7 @@ import android.os.IBinder
 import android.os.Process
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import kotlinx.coroutines.runBlocking
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
@@ -124,8 +125,25 @@ class RayanVoiceAssistantService : Service() {
                     .putExtra(RayanVoiceCaptureService.EXTRA_TRANSCRIPT, phrase))
                 val request = RayanVoiceCommandRouter.parse(phrase)
                 if (request == null) {
-                    status("فرمان شناخته نشد؛ اجرا نشد.")
-                    speak("فرمان شناخته نشد.")
+                    RayanConversationArchive.append(
+                        context = this,
+                        role = "user",
+                        text = phrase,
+                        origin = "speech",
+                        status = "sent"
+                    )
+                    val answer = runBlocking {
+                        Api.chat(this@RayanVoiceAssistantService, listOf(Msg("user", phrase)))
+                    }
+                    RayanConversationArchive.append(
+                        context = this,
+                        role = "assistant",
+                        text = answer,
+                        origin = "assistant",
+                        status = "complete"
+                    )
+                    status(answer)
+                    speak(answer)
                     return
                 }
                 val result = RayanVoiceCommandRuntime.execute(this, request, session, false)
@@ -153,7 +171,7 @@ class RayanVoiceAssistantService : Service() {
             override fun onError(utteranceId: String?) { if (utteranceId == id) latch.countDown() }
             override fun onError(utteranceId: String?, errorCode: Int) { if (utteranceId == id) latch.countDown() }
         })
-        return engine.speak(text.take(250), TextToSpeech.QUEUE_FLUSH, null, id) == TextToSpeech.SUCCESS &&
+        return engine.speak(text.take(700), TextToSpeech.QUEUE_FLUSH, null, id) == TextToSpeech.SUCCESS &&
             latch.await(12, TimeUnit.SECONDS)
     }
 

@@ -3,6 +3,7 @@
 package com.personalai.app
 
 import android.os.Bundle
+import android.content.Intent
 import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -117,6 +118,15 @@ fun PersonalAIApp() {
                 .padding(padding)
                 .padding(12.dp)
         ) {
+
+            Button(
+                onClick = {
+                    context.startActivity(Intent(context, RayanVoiceControlActivity::class.java))
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("کنترل صوتی رایان")
+            }
 
             LazyColumn(
                 modifier = Modifier

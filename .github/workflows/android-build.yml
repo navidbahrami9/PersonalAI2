@@ -79,6 +79,20 @@ jobs:
           echo "===== Project structure ====="
           find . -maxdepth 5 -type f | sort
 
+      - name: Install offline speaker verification runtime and model
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p app/libs app/src/main/assets
+          curl -fL --retry 3 \
+            https://github.com/k2-fsa/sherpa-onnx/releases/download/v2.0.1/sherpa-onnx-2.0.1.aar \
+            -o app/libs/sherpa-onnx-2.0.1.aar
+          echo "a8d09d1d32f3eb8520482c6d3d43fae674681c5b050385967c70a3c2c9bf0ee7  app/libs/sherpa-onnx-2.0.1.aar" | sha256sum -c -
+          curl -fL --retry 3 \
+            "https://huggingface.co/csukuangfj/speaker-embedding-models/resolve/0743f301363dec56491a490f6d6cbc9d67f9a3bf/3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx?download=true" \
+            -o app/src/main/assets/3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx
+          echo "357a834f702b80161e5b981182c038e18553c1f2ca752ed6cec2052365d4129b  app/src/main/assets/3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx" | sha256sum -c -
+
       - name: Check Kotlin compilation
         shell: bash
         run: |

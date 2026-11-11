@@ -9,6 +9,10 @@ android {
 
     compileSdk = 35
 
+    androidResources {
+        noCompress += listOf("onnx")
+    }
+
     defaultConfig {
         applicationId = "com.personalai.app"
 

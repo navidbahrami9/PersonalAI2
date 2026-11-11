@@ -13,6 +13,35 @@ object RayanOwnerVoiceVerifier {
             android.os.SystemClock.elapsedRealtime() < expiresAtElapsedRealtime
     }
 
-    // Session issuance will be added only inside this verifier after model scoring,
-    // signal-quality checks, and device-specific threshold calibration are complete.
+    /**
+     * Issues a short-lived owner session only when a randomized Persian phrase
+     * is recognized exactly and the speaker score clears the locally calibrated
+     * owner-vs-family threshold. Callers must discard the audio buffer afterward.
+     */
+    fun verifyAndIssue(
+        context: android.content.Context,
+        samples: FloatArray,
+        expectedChallenge: String
+    ): Session? {
+        if (expectedChallenge.trim().length < 8) return null
+        val calibration = RayanVoiceCalibrationStore.load(context) ?: return null
+        if (calibration.modelId != RayanSpeakerEmbeddingEngine.MODEL_ID) return null
+
+        val recognized = RayanOfflinePersianRecognizer(context).use {
+            it.transcribe(samples)
+        }
+        if (normalizeChallenge(recognized) != normalizeChallenge(expectedChallenge)) return null
+
+        val score = RayanSpeakerEmbeddingEngine(context).use { it.score(samples) }
+        if (score < calibration.threshold) return null
+
+        return Session(android.os.SystemClock.elapsedRealtime() + 20_000L)
+    }
+
+    private fun normalizeChallenge(value: String): String =
+        value.replace('ي', 'ی')
+            .replace('ك', 'ک')
+            .replace(Regex("[،؛:,.!?؟]+"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
 }

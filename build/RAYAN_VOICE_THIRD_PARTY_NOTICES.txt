@@ -1,0 +1,22 @@
+Third-party notices for the Rayan voice components
+
+1. sherpa-onnx Android AAR 2.0.1
+   Project: https://github.com/k2-fsa/sherpa-onnx
+   License: Apache License 2.0
+   The AAR is downloaded from the upstream v2.0.1 release and SHA-256 checked during CI.
+
+2. 3D-Speaker CAM++ VoxCeleb speaker embedding model
+   Project: https://github.com/modelscope/3D-Speaker
+   Model export: sherpa-onnx speaker-embedding-models
+   License: Apache License 2.0
+   File: 3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx
+   SHA-256: 357a834f702b80161e5b981182c038e18553c1f2ca752ed6cec2052365d4129b
+
+3. Whisper tiny multilingual model
+   Upstream model: OpenAI Whisper (https://github.com/openai/whisper)
+   Upstream license: MIT
+   ONNX export and Android runtime integration: sherpa-onnx (Apache License 2.0)
+   Files: tiny-encoder.int8.onnx, tiny-decoder.int8.onnx, tiny-tokens.txt
+   The model is used for on-device Persian transcription. Quality on the target phone must be tested before enabling command execution.
+
+The sherpa-onnx code license does not replace the separate license of each model. Keep this notice with redistributed builds and verify upstream model terms before commercial redistribution.

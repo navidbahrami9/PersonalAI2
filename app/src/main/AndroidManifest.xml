@@ -24,50 +24,30 @@
             android:name="com.personalai.app.RayanVoiceCommandActivity"
             android:label="فرمان صوتی رایان"
             android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
 
         <activity
             android:name="com.personalai.app.RayanVoiceCalibrationActivity"
             android:label="کالیبراسیون صدای رایان"
             android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
 
         <activity
             android:name="com.personalai.app.RayanOfflineSpeechTestActivity"
             android:label="آزمون گفتار آفلاین"
             android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
 
         <activity
             android:name="com.personalai.app.RayanVoiceEnrollmentActivity"
             android:label="ثبت صدای مالک"
             android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
 
         <activity
             android:name="com.personalai.app.RayanVoiceControlActivity"
             android:label="کنترل صوت رایان"
             android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
 
         <service
@@ -86,10 +66,6 @@
             android:name="com.personalai.app.RayanAudioDiagnosticsActivity"
             android:label="آزمایش صوت رایان"
             android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
 
         <service

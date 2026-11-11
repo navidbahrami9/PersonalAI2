@@ -72,7 +72,7 @@ class RayanVoiceCaptureService : Service() {
         )
         if (minBytes <= 0) {
             publishStatus("ساخت بافر میکروفون ناموفق بود.")
-            stopCapture()
+            finishFailedStart()
             return
         }
         val bufferBytes = maxOf(minBytes, SAMPLE_RATE / 5 * 2)
@@ -89,7 +89,7 @@ class RayanVoiceCaptureService : Service() {
         if (audio == null || audio.state != AudioRecord.STATE_INITIALIZED) {
             audio?.release()
             publishStatus("راه‌اندازی سخت‌افزار میکروفون ناموفق بود.")
-            stopCapture()
+            finishFailedStart()
             return
         }
 
@@ -132,6 +132,12 @@ class RayanVoiceCaptureService : Service() {
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
+    }
+
+    private fun finishFailedStart() {
+        running = false
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     private fun stopCapture() {

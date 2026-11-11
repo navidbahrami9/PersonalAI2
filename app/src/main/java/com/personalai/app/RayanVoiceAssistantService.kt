@@ -79,7 +79,11 @@ class RayanVoiceAssistantService : Service() {
         Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO)
         var asr: RayanOfflinePersianRecognizer? = null
         try {
-            check(ttsReady.await(8, TimeUnit.SECONDS) && ttsOk) { "موتور گفتار فارسی آماده نیست" }
+            // Microphone capture must not depend on the device having a Persian TTS voice.
+            // Some Android images report LANG_MISSING_DATA immediately; that must not kill the mic service.
+            if (!ttsReady.await(3, TimeUnit.SECONDS) || !ttsOk) {
+                status("میکروفون فعال است؛ صدای فارسی دستگاه در دسترس نیست. وضعیت را روی صفحه می‌بینی.")
+            }
             asr = RayanOfflinePersianRecognizer(this)
             while (running) {
                 val audio = RayanAudioRecorder.record(this, 5)
@@ -96,7 +100,7 @@ class RayanVoiceAssistantService : Service() {
                 } finally { audio.fill(0f) }
             }
         } catch (e: Exception) {
-            if (running) status("خطای صوتی: ${e.message ?: e.javaClass.simpleName}")
+            if (running) status("خطای صوتی [${e.javaClass.simpleName}]: ${e.message ?: "بدون جزئیات"}")
         } finally {
             running = false
             asr?.close()
@@ -108,7 +112,10 @@ class RayanVoiceAssistantService : Service() {
     private fun handleCommand(asr: RayanOfflinePersianRecognizer) {
         val challenge = RayanVoiceChallenge.next()
         status("رایان شنیده شد؛ عبارت تصادفی را تکرار کن: $challenge")
-        check(speak("برای تأیید هویت، تکرار کن: $challenge"))
+        if (!speak("برای تأیید هویت، تکرار کن: $challenge")) {
+            status("ضبط فعال است، اما برای احراز هویت باید صدای فارسی دستگاه در دسترس باشد.")
+            return
+        }
         val proof = RayanAudioRecorder.record(this, 6)
         try {
             val session = RayanOwnerVoiceVerifier.verifyAndIssue(this, proof, challenge)
@@ -117,7 +124,7 @@ class RayanVoiceAssistantService : Service() {
                 speak("هویت تأیید نشد.")
                 return
             }
-            check(speak("هویت تأیید شد. فرمان را بگو."))
+            speak("هویت تأیید شد. فرمان را بگو.")
             val audio = RayanAudioRecorder.record(this, 6)
             try {
                 val phrase = asr.transcribe(audio)

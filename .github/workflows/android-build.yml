@@ -96,6 +96,19 @@ jobs:
             "https://huggingface.co/csukuangfj/speaker-embedding-models/resolve/0743f301363dec56491a490f6d6cbc9d67f9a3bf/3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx?download=true" \
             -o app/src/main/assets/3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx
           echo "357a834f702b80161e5b981182c038e18553c1f2ca752ed6cec2052365d4129b  app/src/main/assets/3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx" | sha256sum -c -
+          mkdir -p /tmp/rayan-whisper
+          curl -fL --retry 3 \
+            https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.tar.bz2 \
+            -o /tmp/rayan-whisper/model.tar.bz2
+          tar -xjf /tmp/rayan-whisper/model.tar.bz2 -C /tmp/rayan-whisper
+          ENCODER="$(find /tmp/rayan-whisper -name tiny-encoder.int8.onnx -print -quit)"
+          DECODER="$(find /tmp/rayan-whisper -name tiny-decoder.int8.onnx -print -quit)"
+          TOKENS="$(find /tmp/rayan-whisper -name tiny-tokens.txt -print -quit)"
+          test -s "$ENCODER" && test -s "$DECODER" && test -s "$TOKENS"
+          mkdir -p app/src/main/assets/whisper-tiny
+          cp "$ENCODER" app/src/main/assets/whisper-tiny/tiny-encoder.int8.onnx
+          cp "$DECODER" app/src/main/assets/whisper-tiny/tiny-decoder.int8.onnx
+          cp "$TOKENS" app/src/main/assets/whisper-tiny/tiny-tokens.txt
 
       - name: Check Kotlin compilation
         shell: bash

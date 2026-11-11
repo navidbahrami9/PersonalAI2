@@ -10,6 +10,7 @@
         android:theme="@style/AppTheme"
         android:label="دستیار شخصی"
         android:usesCleartextTraffic="true">
+
         <activity
             android:name="com.personalai.app.MainActivity"
             android:exported="true">
@@ -70,10 +71,32 @@
         </activity>
 
         <service
+            android:name="com.personalai.app.RayanVoiceAssistantService"
+            android:label="دستیار صوتی رایان"
+            android:foregroundServiceType="microphone"
+            android:exported="false" />
+
+        <service
+            android:name="com.personalai.app.RayanVoiceAssistantService"
+            android:label="دستیار صوتی رایان"
+            android:foregroundServiceType="microphone"
+            android:exported="false" />
+
+        <service
             android:name="com.personalai.app.RayanVoiceCaptureService"
             android:label="میکروفون رایان"
             android:foregroundServiceType="microphone"
             android:exported="false" />
+
+        <activity
+            android:name="com.personalai.app.RayanAudioDiagnosticsActivity"
+            android:label="آزمایش صوت رایان"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <service
             android:name="com.personalai.app.RayanScreenMemoryService"

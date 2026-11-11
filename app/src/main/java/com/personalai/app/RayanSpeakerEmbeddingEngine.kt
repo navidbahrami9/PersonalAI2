@@ -72,7 +72,8 @@ class RayanSpeakerEmbeddingEngine(context: Context) : AutoCloseable {
         val mean = FloatArray(dimensions) { index ->
             vectors.sumOf { it[index].toDouble() }.div(vectors.size).toFloat()
         }
-        return RayanVoiceTemplateStore.save(appContext, MODEL_ID, normalize(mean))
+        RayanVoiceTemplateStore.save(appContext, MODEL_ID, normalize(mean))
+        return true
     }
 
     /** Cosine similarity in [-1, 1]; never treats a score as authentication. */

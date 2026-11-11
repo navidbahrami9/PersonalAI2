@@ -30,6 +30,8 @@ class RayanVoiceCaptureService : Service() {
         const val ACTION_LEVEL = "com.personalai.app.voice.LEVEL"
         const val EXTRA_STATUS = "status"
         const val EXTRA_LEVEL_DB = "level_db"
+        const val ACTION_TRANSCRIPT = "com.personalai.app.voice.TRANSCRIPT"
+        const val EXTRA_TRANSCRIPT = "transcript"
         private const val CHANNEL_ID = "rayan_microphone"
         private const val NOTIFICATION_ID = 7401
         private const val SAMPLE_RATE = 16_000

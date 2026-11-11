@@ -29,7 +29,7 @@ import androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
 class RayanVoiceControlActivity : ComponentActivity() {
     private val requestAudioPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) startVoiceCapture()
+            if (granted) requestPermissionsAndStart()
         }
 
     private val requestNotificationPermission =
@@ -43,14 +43,14 @@ class RayanVoiceControlActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 VoiceControlPanel(
-                    onStart = { startVoiceCapture() },
+                    onStart = { requestPermissionsAndStart() },
                     onStop = { stopVoiceCapture() }
                 )
             }
         }
     }
 
-    private fun startVoiceCapture() {
+    private fun requestPermissionsAndStart() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED
         ) {
@@ -64,17 +64,21 @@ class RayanVoiceControlActivity : ComponentActivity() {
             requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
             return
         }
+        startVoiceCapture()
+    }
+
+    private fun startVoiceCapture() {
         ContextCompat.startForegroundService(
             this,
-            Intent(this, RayanVoiceCaptureService::class.java)
-                .setAction(RayanVoiceCaptureService.ACTION_START)
+            Intent(this, RayanVoiceAssistantService::class.java)
+                .setAction(RayanVoiceAssistantService.ACTION_START)
         )
     }
 
     private fun stopVoiceCapture() {
         startService(
-            Intent(this, RayanVoiceCaptureService::class.java)
-                .setAction(RayanVoiceCaptureService.ACTION_STOP)
+            Intent(this, RayanVoiceAssistantService::class.java)
+                .setAction(RayanVoiceAssistantService.ACTION_STOP)
         )
     }
 }
@@ -108,11 +112,11 @@ private fun VoiceControlPanel(onStart: () -> Unit, onStop: () -> Unit) {
         modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("کنترل میکروفون رایان", style = MaterialTheme.typography.headlineSmall)
+        Text("کنترل دستیار صوتی رایان", style = MaterialTheme.typography.headlineSmall)
         Text(status)
         Text("سطح ورودی: ${level.toInt()} dBFS")
         Button(onClick = onStart, modifier = Modifier.fillMaxWidth()) { Text("شروع میکروفون") }
         Button(onClick = onStop, modifier = Modifier.fillMaxWidth()) { Text("توقف میکروفون") }
-        Text("این مرحله فقط مسیر دریافت صدا و حذف نویز را آزمایش می‌کند؛ هنوز تشخیص گوینده یا اجرای فرمان فعال نیست.")
+        Text("برای توقف، دکمهٔ توقف یا اعلان دائمی را بزن. واژهٔ بیدارباش «رایان» است؛ پیش از هر فرمان، عبارت تصادفی و صدای مالک بررسی می‌شود. پردازش آفلاین است.")
     }
 }

@@ -90,7 +90,7 @@ jobs:
 
           echo "===== APK CONTENT ====="
           unzip -l app/build/outputs/apk/debug/app-debug.apk \
-            | grep -E "classes[0-9]*\\.dex|AndroidManifest.xml" || true
+            | grep -E "classes[0-9]*\.dex|AndroidManifest.xml" || true
 
       - name: Upload APK
         if: success()

@@ -2,10 +2,12 @@ package com.rayan.controller
 
 import android.Manifest
 import android.app.Activity
+import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -16,6 +18,9 @@ import android.widget.TextView
 
 class RayanControllerActivity : Activity() {
     private lateinit var state: TextView
+    private lateinit var lockButton: Button
+    private lateinit var unlockButton: Button
+    private lateinit var notificationButton: Button
     private var locked = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,18 +44,23 @@ class RayanControllerActivity : Activity() {
         state = TextView(this).apply { textSize = 16f }
         layout.addView(state)
 
-        layout.addView(makeButton("قفل اضطراری محلی") {
+        lockButton = makeButton("فعال‌کردن قفل اضطراری") {
             setLocked(true)
-        })
-        layout.addView(makeButton("بازکردن قفل محلی") {
-            setLocked(false)
-        })
-        layout.addView(makeButton("ارسال اعلان آزمایشی") {
-            requestNotificationOrPost()
-        })
+        }
+        layout.addView(lockButton)
+
+        unlockButton = makeButton("بازکردن قفل با رمز گوشی") {
+            requestDeviceCredential()
+        }
+        layout.addView(unlockButton)
+
+        notificationButton = makeButton("ارسال اعلان آزمایشی") {
+            if (!locked) requestNotificationOrPost()
+        }
+        layout.addView(notificationButton)
 
         layout.addView(TextView(this).apply {
-            text = "توجه: قفل این نسخه فقط درخواست‌های همین اپ را مسدود می‌کند و هنوز پردازش‌های در حال اجرای Termux را متوقف نمی‌کند."
+            text = "قفل این نسخه فقط قابلیت‌های محلی همین اپ را می‌بندد؛ هنوز پردازش‌های Termux را متوقف نمی‌کند."
             textSize = 13f
             setPadding(0, 24, 0, 0)
         })
@@ -77,11 +87,45 @@ class RayanControllerActivity : Activity() {
     }
 
     private fun refreshState() {
-        state.text = if (locked) "وضعیت: قفل اضطراری محلی فعال است"
-        else "وضعیت: کنترلر آماده است"
+        state.text = if (locked) {
+            "وضعیت: قفل اضطراری فعال است؛ برای بازکردن، رمز یا اثرانگشت قفل صفحه لازم است."
+        } else {
+            "وضعیت: کنترلر آماده است."
+        }
+        lockButton.isEnabled = !locked
+        unlockButton.isEnabled = locked
+        notificationButton.isEnabled = !locked
+    }
+
+    private fun requestDeviceCredential() {
+        if (!locked) return
+        val keyguard = getSystemService(KeyguardManager::class.java)
+        if (!keyguard.isDeviceSecure) {
+            state.text = "برای امنیت، ابتدا PIN، الگو یا گذرواژهٔ قفل صفحهٔ گوشی را فعال کن."
+            return
+        }
+        val intent: Intent = keyguard.createConfirmDeviceCredentialIntent(
+            "تأیید هویت",
+            "برای بازکردن قفل رایان، قفل صفحهٔ گوشی را تأیید کن."
+        ) ?: run {
+            state.text = "امکان نمایش تأیید هویت دستگاه وجود ندارد؛ قفل همچنان فعال است."
+            return
+        }
+        startActivityForResult(intent, REQUEST_DEVICE_CREDENTIAL)
+    }
+
+    @Deprecated("Deprecated by Android, retained for compatibility with minSdk 26")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_DEVICE_CREDENTIAL && resultCode == RESULT_OK) {
+            setLocked(false)
+        } else if (requestCode == REQUEST_DEVICE_CREDENTIAL && locked) {
+            state.text = "قفل همچنان فعال است؛ تأیید هویت انجام نشد."
+        }
     }
 
     private fun requestNotificationOrPost() {
+        if (locked) return
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
@@ -95,12 +139,13 @@ class RayanControllerActivity : Activity() {
         requestCode: Int, permissions: Array<out String>, grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_NOTIFICATIONS &&
+        if (requestCode == REQUEST_NOTIFICATIONS && !locked &&
             grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
         ) postTestNotification()
     }
 
     private fun postTestNotification() {
+        if (locked) return
         val manager = getSystemService(NotificationManager::class.java)
         val channel = "rayan_controller_test"
         if (Build.VERSION.SDK_INT >= 26) {
@@ -121,5 +166,6 @@ class RayanControllerActivity : Activity() {
         private const val PREFS = "rayan_controller"
         private const val KEY_LOCKED = "emergency_local_lock"
         private const val REQUEST_NOTIFICATIONS = 71
+        private const val REQUEST_DEVICE_CREDENTIAL = 72
     }
 }

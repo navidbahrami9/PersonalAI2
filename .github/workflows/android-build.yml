@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APKs
 
 on:
   workflow_dispatch:
@@ -14,7 +14,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
-
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -35,66 +34,47 @@ jobs:
         shell: bash
         run: |
           set -e
-
-          wget -q \
-            https://services.gradle.org/distributions/gradle-8.11.1-bin.zip \
-            -O /tmp/gradle.zip
-
+          wget -q https://services.gradle.org/distributions/gradle-8.11.1-bin.zip -O /tmp/gradle.zip
           sudo unzip -q /tmp/gradle.zip -d /opt
-
           echo "/opt/gradle-8.11.1/bin" >> "$GITHUB_PATH"
 
       - name: Prepare Android project
         shell: bash
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-
           echo "===== Project structure ====="
-          find . -maxdepth 5 -type f | sort
+          find . -maxdepth 7 -type f | sort
 
-      - name: Check Kotlin compilation
+      - name: Compile both applications
         shell: bash
         run: |
           set -e
-
-          echo "===== MainActivity source ====="
-          find app/src -name "MainActivity.kt" -print
-
-          echo "===== MainActivity source content ====="
-          cat app/src/main/java/com/personalai/app/MainActivity.kt
-
-          echo "===== Kotlin compilation ====="
-          gradle :app:compileDebugKotlin --stacktrace
-
-          echo "===== Compiled classes ====="
-          find app/build -type f | grep -E "MainActivity|classes" | head -100
-
-      - name: Build APK
-        shell: bash
-        run: |
-          set -e
-
           java -version
           gradle --version
+          gradle :app:compileDebugKotlin :rayan-controller:compileDebugKotlin --stacktrace
 
-          echo "===== Building APK ====="
-          gradle assembleDebug --stacktrace --info
-
-      - name: Inspect APK
+      - name: Build both APKs
         shell: bash
         run: |
           set -e
-
-          echo "===== APK FILE ====="
+          gradle :app:assembleDebug :rayan-controller:assembleDebug --stacktrace
+          test -s app/build/outputs/apk/debug/app-debug.apk
+          test -s rayan-controller/build/outputs/apk/debug/rayan-controller-debug.apk
           ls -lh app/build/outputs/apk/debug/app-debug.apk
+          ls -lh rayan-controller/build/outputs/apk/debug/rayan-controller-debug.apk
 
-          echo "===== APK CONTENT ====="
-          unzip -l app/build/outputs/apk/debug/app-debug.apk \
-            | grep -E "classes[0-9]*\.dex|AndroidManifest.xml" || true
+      - name: Inspect Rayan Controller APK
+        shell: bash
+        run: |
+          set -e
+          unzip -l rayan-controller/build/outputs/apk/debug/rayan-controller-debug.apk |
+            grep -E 'classes[0-9]*\.dex|AndroidManifest.xml'
 
-      - name: Upload APK
+      - name: Upload APKs
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: PersonalAI-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: PersonalAI2-and-Rayan-Controller-APKs
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            rayan-controller/build/outputs/apk/debug/rayan-controller-debug.apk

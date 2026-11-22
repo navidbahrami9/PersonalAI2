@@ -137,6 +137,15 @@ fun PersonalAIApp() {
                 Text("اتصال امن کنترلر")
             }
 
+            Button(
+                onClick = {
+                    context.startActivity(Intent(context, RayanModelManagerActivity::class.java))
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("مدیریت مدل‌های آفلاین")
+            }
+
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)

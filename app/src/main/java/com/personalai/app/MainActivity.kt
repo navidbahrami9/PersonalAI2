@@ -128,6 +128,15 @@ fun PersonalAIApp() {
                 Text("کنترل صوتی رایان")
             }
 
+            Button(
+                onClick = {
+                    context.startActivity(Intent(context, RayanDevControllerPairingActivity::class.java))
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("اتصال امن کنترلر")
+            }
+
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)

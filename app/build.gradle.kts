@@ -8,7 +8,7 @@ android {
     namespace = "com.personalai.app"
 
     compileSdk = 35
-    buildToolsVersion = "34.0.4"
+    buildToolsVersion = "35.0.0"
 
     androidResources {
         noCompress += listOf("onnx")

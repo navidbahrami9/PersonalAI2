@@ -26,6 +26,11 @@
             android:exported="false" />
 
         <activity
+            android:name="com.personalai.app.RayanModelManagerActivity"
+            android:label="مدیریت مدل‌های آفلاین"
+            android:exported="false" />
+
+        <activity
             android:name="com.personalai.app.RayanApprovalActivity"
             android:label="تأیید فرمان رایان"
             android:exported="false" />

@@ -1,5 +1,6 @@
 package com.personalai.app
 
+import androidx.activity.ComponentActivity
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper

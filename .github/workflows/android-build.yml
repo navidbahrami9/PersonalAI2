@@ -94,7 +94,7 @@ jobs:
           gradle :app:compileDebugKotlin --stacktrace
 
           echo "===== Compiled classes ====="
-          find app/build -type f | grep -E "MainActivity|classes" | head -100
+          find app/build -type f | grep -E "MainActivity|classes" | sed -n '1,100p'
 
       - name: Build APK
         shell: bash

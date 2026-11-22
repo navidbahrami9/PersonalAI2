@@ -6,11 +6,10 @@ import com.k2fsa.sherpa.onnx.SpeakerEmbeddingExtractor
 import com.k2fsa.sherpa.onnx.SpeakerEmbeddingExtractorConfig
 
 /**
- * Offline speaker-embedding engine.
+ * Offline speaker-embedding engine backed by a verified optional model in private app storage.
  *
  * Persists only a normalized embedding through RayanVoiceTemplateStore.
  * Raw microphone samples remain in memory and are never written by this class.
- * Scores are diagnostic until device-specific owner/family calibration exists.
  */
 class RayanSpeakerEmbeddingEngine(context: Context) : AutoCloseable {
     companion object {
@@ -29,11 +28,14 @@ class RayanSpeakerEmbeddingEngine(context: Context) : AutoCloseable {
     private fun getExtractor(): SpeakerEmbeddingExtractor = synchronized(lock) {
         check(!closed) { "Speaker engine is closed" }
         extractor ?: run {
-            appContext.assets.open(MODEL_FILE).use { }
+            val modelFile = RayanModelStore.speakerModel(appContext)
+            check(modelFile.isFile) {
+                "مدل تشخیص گوینده نصب نیست؛ ابتدا آن را از بخش مدیریت مدل‌ها دریافت کن."
+            }
             SpeakerEmbeddingExtractor(
-                assetManager = appContext.assets,
+                assetManager = null,
                 config = SpeakerEmbeddingExtractorConfig(
-                    model = MODEL_FILE,
+                    model = modelFile.absolutePath,
                     numThreads = 2,
                     debug = false,
                     provider = "cpu"
@@ -104,7 +106,7 @@ class RayanSpeakerEmbeddingEngine(context: Context) : AutoCloseable {
             "Speaker model returned an invalid embedding"
         }
         val norm = kotlin.math.sqrt(vector.sumOf { it.toDouble() * it.toDouble() })
-        require(norm > 1e-12) { "Speaker embedding has zero magnitude" }
+        require(norm > 1e-12) { "Speaker model returned a zero vector" }
         return FloatArray(vector.size) { (vector[it] / norm).toFloat() }
     }
 

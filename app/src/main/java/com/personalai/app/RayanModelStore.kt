@@ -132,6 +132,7 @@ object RayanModelStore {
             check(response in 200..299) { "دریافت مدل ناموفق بود: HTTP $response" }
 
             var total = 0L
+            var lastProgress = 0L
             val digest = MessageDigest.getInstance("SHA-256")
             connection.inputStream.use { input ->
                 FileOutputStream(temporary).use { output ->
@@ -143,7 +144,10 @@ object RayanModelStore {
                         check(total <= model.size) { "حجم فایل دریافتی بیشتر از مقدار مورد انتظار است." }
                         digest.update(buffer, 0, count)
                         output.write(buffer, 0, count)
-                        onProgress(model.name, total, model.size)
+                        if (total == model.size || total - lastProgress >= 1_048_576L) {
+                            lastProgress = total
+                            onProgress(model.name, total, model.size)
+                        }
                     }
                     output.fd.sync()
                 }

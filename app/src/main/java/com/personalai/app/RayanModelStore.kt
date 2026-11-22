@@ -54,6 +54,17 @@ object RayanModelStore {
     fun speakerModel(context: Context): File =
         File(context.applicationContext.filesDir, "models/${speakerFile.name}")
 
+    fun hasWhisperFiles(context: Context): Boolean =
+        whisperFiles.all {
+            val file = File(whisperDirectory(context), it.name)
+            file.isFile && file.length() == it.size
+        }
+
+    fun hasSpeakerFile(context: Context): Boolean {
+        val file = speakerModel(context)
+        return file.isFile && file.length() == speakerFile.size
+    }
+
     fun isWhisperInstalled(context: Context): Boolean =
         whisperFiles.all { isValid(File(whisperDirectory(context), it.name), it) }
 
@@ -152,7 +163,11 @@ object RayanModelStore {
                     java.nio.file.StandardCopyOption.ATOMIC_MOVE
                 )
             } catch (_: Exception) {
-                check(temporary.renameTo(target)) { "ثبت نهایی فایل مدل ناموفق بود." }
+                java.nio.file.Files.move(
+                    temporary.toPath(),
+                    target.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                )
             }
             check(isValid(target, model)) { "بررسی نهایی مدل ناموفق بود." }
         } finally {

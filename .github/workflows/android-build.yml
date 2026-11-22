@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - feature/rayan-archive-staging-2026-11-10
+      - feature/personalai2-single-apk-rayan-2026-11-22
 
 jobs:
   build:

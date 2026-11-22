@@ -38,9 +38,17 @@ private fun RayanModelManagerPanel() {
     val scope = rememberCoroutineScope()
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
 
-    var whisperReady by remember { mutableStateOf(RayanModelStore.isWhisperInstalled(context)) }
-    var speakerReady by remember { mutableStateOf(RayanModelStore.isSpeakerInstalled(context)) }
+    var whisperReady by remember { mutableStateOf(RayanModelStore.hasWhisperFiles(context)) }
+    var speakerReady by remember { mutableStateOf(RayanModelStore.hasSpeakerFile(context)) }
     var busy by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        val installed = withContext(Dispatchers.IO) {
+            RayanModelStore.isWhisperInstalled(context) to RayanModelStore.isSpeakerInstalled(context)
+        }
+        whisperReady = installed.first
+        speakerReady = installed.second
+    }
     var status by remember {
         mutableStateOf("مدل‌ها اختیاری‌اند. فقط با انتخاب خودت دریافت می‌شوند و پس از دریافت، بدون اینترنت کار می‌کنند.")
     }

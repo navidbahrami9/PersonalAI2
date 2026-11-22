@@ -22,6 +22,7 @@ object RayanOwnerVoiceVerifier {
      * owner-vs-family threshold. Callers must discard the audio buffer afterward.
      */
     fun isLikelyOwner(context: android.content.Context, samples: FloatArray): Boolean {
+        if (!RayanModelStore.hasSpeakerFile(context)) return false
         val calibration = RayanVoiceCalibrationStore.load(context) ?: return false
         if (calibration.modelId != RayanSpeakerEmbeddingEngine.MODEL_ID) return false
         return RayanSpeakerEmbeddingEngine(context).use { it.score(samples) >= calibration.threshold }
@@ -33,6 +34,7 @@ object RayanOwnerVoiceVerifier {
         expectedChallenge: String
     ): Session? {
         if (expectedChallenge.trim().length < 8) return null
+        if (!RayanModelStore.hasWhisperFiles(context) || !RayanModelStore.hasSpeakerFile(context)) return null
         val calibration = RayanVoiceCalibrationStore.load(context) ?: return null
         if (calibration.modelId != RayanSpeakerEmbeddingEngine.MODEL_ID) return null
 

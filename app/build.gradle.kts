@@ -8,6 +8,7 @@ android {
     namespace = "com.personalai.app"
 
     compileSdk = 35
+    buildToolsVersion = "34.0.4"
 
     androidResources {
         noCompress += listOf("onnx")
@@ -29,6 +30,12 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
 
@@ -40,4 +47,5 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation(files("libs/sherpa-onnx-2.0.1.aar"))
+
 }

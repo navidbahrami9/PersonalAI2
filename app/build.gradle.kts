@@ -17,6 +17,11 @@ android {
     defaultConfig {
         applicationId = "com.personalai.app"
 
+        // This build targets the current ARM64 Android device class only.
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
+
         minSdk = 26
         targetSdk = 35
 

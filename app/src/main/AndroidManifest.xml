@@ -21,53 +21,46 @@
         </activity>
 
         <activity
+            android:name="com.personalai.app.RayanDevControllerPairingActivity"
+            android:label="اتصال امن کنترلر"
+            android:exported="false" />
+
+        <activity
+            android:name="com.personalai.app.RayanApprovalActivity"
+            android:label="تأیید فرمان رایان"
+            android:exported="false" />
+
+        <activity
             android:name="com.personalai.app.RayanVoiceCommandActivity"
             android:label="فرمان صوتی رایان"
-            android:exported="true">
-        </activity>
-
+            android:exported="false" />
         <activity
             android:name="com.personalai.app.RayanVoiceCalibrationActivity"
             android:label="کالیبراسیون صدای رایان"
-            android:exported="true">
-        </activity>
-
+            android:exported="false" />
         <activity
             android:name="com.personalai.app.RayanOfflineSpeechTestActivity"
             android:label="آزمون گفتار آفلاین"
-            android:exported="true">
-        </activity>
-
+            android:exported="false" />
         <activity
             android:name="com.personalai.app.RayanVoiceEnrollmentActivity"
             android:label="ثبت صدای مالک"
-            android:exported="true">
-        </activity>
-
+            android:exported="false" />
         <activity
             android:name="com.personalai.app.RayanVoiceControlActivity"
             android:label="کنترل صوت رایان"
-            android:exported="true">
-        </activity>
+            android:exported="false" />
 
         <service
             android:name="com.personalai.app.RayanVoiceAssistantService"
             android:label="دستیار صوتی رایان"
             android:foregroundServiceType="microphone"
             android:exported="false" />
-
         <service
             android:name="com.personalai.app.RayanVoiceCaptureService"
             android:label="میکروفون رایان"
             android:foregroundServiceType="microphone"
             android:exported="false" />
-
-        <activity
-            android:name="com.personalai.app.RayanAudioDiagnosticsActivity"
-            android:label="آزمایش صوت رایان"
-            android:exported="true">
-        </activity>
-
         <service
             android:name="com.personalai.app.RayanScreenMemoryService"
             android:label="Rayan Screen Memory"
@@ -80,5 +73,9 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/rayan_screen_memory" />
         </service>
+        <activity
+            android:name="com.personalai.app.RayanAudioDiagnosticsActivity"
+            android:label="آزمایش صوت رایان"
+            android:exported="false" />
     </application>
 </manifest>
